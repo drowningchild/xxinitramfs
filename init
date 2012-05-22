@@ -1,0 +1,34 @@
+#!/sbin/busybox sh
+_PATH="$PATH"
+PATH=/sbin
+
+busybox cd /
+busybox date >>boot.txt
+exec >>boot.txt 2>&1
+busybox rm init
+busybox mount -t proc proc /proc
+busybox mount -t sysfs sysfs /sys
+
+#load_image=/stage1/boot.cpio
+
+busybox mv xx init
+if busybox grep -q bootmode=2 /proc/cmdline ; then
+	# recovery boot
+	busybox rm init.rc init.smdk4210.rc init.smdk4210.usb init.goldfish.rc
+	exec /init
+fi
+
+#busybox cpio -i < ${load_image}
+
+if busybox grep -q 1 /sys/class/power_supply/battery/batt_lp_charging ; then
+	# low power mode
+	busybox cp lpm.rc init.rc
+	busybox rm init.smdk4210.rc
+fi
+
+busybox umount /sys
+busybox umount /proc
+busybox date >>boot.txt
+busybox rm -fr /etc /res /tmp /dev/* /recovery.rc
+export PATH="${_PATH}"
+exec /init
